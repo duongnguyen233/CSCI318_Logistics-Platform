@@ -9,8 +9,9 @@
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <modules>
-        <module>library-service</module>
-        <module>book-service</module>
+        <module>warehouse-management-service</module>
+        <module>shipment-tracking-service</module>
+        <module>route-planning-service</module>
     </modules>
 
     <properties>
