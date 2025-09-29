@@ -12,6 +12,7 @@
         <module>warehouse-management-service</module>
         <module>shipment-tracking-service</module>
         <module>route-planning-service</module>
+        <module>agentAI-service</module>
     </modules>
 
     <properties>
