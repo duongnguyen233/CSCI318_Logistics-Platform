@@ -37,3 +37,10 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Environment & Secrets ###
+.env
+*.env
+*.key
+*.secret
+*.credentials
