@@ -11,15 +11,18 @@ public class Shipment {
     private String trackingNumber;
     private String status;      // Pending, In Transit, Delivered
     private String destination;
-    private String address;     // NEW: address for route planning
+    private String address;
+
+    private Long itemId;        // NEW: Reference to WarehouseItem
 
     public Shipment() {}
 
-    public Shipment(String trackingNumber, String status, String destination, String address) {
+    public Shipment(String trackingNumber, String status, String destination, String address, Long itemId) {
         this.trackingNumber = trackingNumber;
         this.status = status;
         this.destination = destination;
         this.address = address;
+        this.itemId = itemId;
     }
 
     // getters and setters
@@ -38,6 +41,9 @@ public class Shipment {
     public String getAddress() { return address; }
     public void setAddress(String address) { this.address = address; }
 
+    public Long getItemId() { return itemId; }
+    public void setItemId(Long itemId) { this.itemId = itemId; }
+
     @Override
     public String toString() {
         return "Shipment{" +
@@ -46,6 +52,7 @@ public class Shipment {
                 ", status='" + status + '\'' +
                 ", destination='" + destination + '\'' +
                 ", address='" + address + '\'' +
+                ", itemId=" + itemId +
                 '}';
     }
 }

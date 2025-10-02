@@ -44,11 +44,14 @@ public class TrackingSpringApplication {
                 String status = (i % 2 == 0) ? "Pending" : "In Transit";
                 String destination = "Destination " + (i + 1);
 
+                Long itemId = (long) ((i % 5) + 1); // Example: link to Warehouse items 1–5
+
                 Shipment shipment = new Shipment(
                         trackingNumber,
                         status,
                         destination,
-                        addresses[i]
+                        addresses[i],
+                        itemId
                 );
 
                 repository.save(shipment);
