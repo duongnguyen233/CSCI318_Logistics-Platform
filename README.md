@@ -1,113 +1,132 @@
-# Spring Boot Microservices
+# Logistics Microservices Platform 🚚📦🤖
 
-This is an improved project based on
-the project [Spring Boot Introduction - Rest Service](https://github.com/gxshub/rest-services-with-spring-v2).
-The following new components and patterns are implmeneted:
+This project implements a logistics management platform using **Spring Boot microservices**.  
+It is based on **Domain-Driven Design (DDD)**, **Event-Driven Architecture with Kafka**, and integrates an **AI Copilot powered by LangChain4j**.  
 
-### __Library and Book Services__
-The Book and Library sub-domains are separately implemented in two standalone microservices:
-__Book Service__ and __Library Service__. The Book Service uses the `RestTemplate`
-API to communicate with the Library Service.
+The following new components and patterns are implemented:
 
-### Application Service Layer
-An application service is added to the __Book Service__.
-This layer interplays between the REST API Layer (`controller`) and
-the Data Access Layer (`repository`).
-It also includes a `RestTemplate` client to get data
-from the __Library Service__.
+---
 
-### DTO Pattern
-DTOs or Data Transfer Objects are objects that carry data
-between processes in order to reduce the number of methods
-calls. They are also views that prevent the exposure of
-domain classes to the external world.
+### 📦 Warehouse Management Service
+- Manages inventory items (`WarehouseItem`) and stock updates.  
+- Exposes REST APIs for CRUD operations on items.  
+- Publishes **InventoryUpdated events** when stock changes.  
+- Example Entity:  
+  ```java
+  @Entity
+  public class WarehouseItem {
+      @Id @GeneratedValue
+      private Long id;
+      private String name;
+      private int quantity;
+      private boolean perishable;
+  }
+  ```
 
-### Domain Events
-The __Book Service__ implements domain event patterns. 
-More specifically, it uses two ways of publishing and handling domain events
-enabled in Spring Boot, i.e.,
-the `AbstractAggregateRoot` generic class
-(used in [`Book.java`](./book-service/src/main/java/csci318/demo/model/Book.java) and
-the `ApplicationEventPublisher` interface
-(used in [`BookService.java`](./book-service/src/main/java/csci318/demo/service/BookService.java)).
-(Reference: [https://www.baeldung.com/spring-data-ddd](https://www.baeldung.com/spring-data-ddd))
+---
 
-### Event-Sourcing
+### 🚚 Shipment Tracking Service
+- Manages shipments (`Shipment`) and delivery status.  
+- Tracks **trackingNumber, status, destination, address, itemId**.  
+- Exposes REST APIs to create, update, and query shipments.  
+- Consumes **InventoryUpdated events** and publishes **ShipmentCreated events**.  
+- Example API:
+  ```http
+  POST /shipments
+  {
+    "trackingNumber": "TRK2001",
+    "status": "Pending",
+    "destination": "Melbourne",
+    "address": "120 Collins St, VIC",
+    "itemId": 3
+  }
+  ```
 
-The __Book Service__ also implements the event sourcing pattern.
-When events of borrows books are created, they are persistent in a table named `BOOK_EVENT` in H2.
-In other words, this table stores the change of system states.
+---
 
-#### View Tables in the H2 Console
-<!--
-Add the following two lines to `src/main/resources/application.properties`:
-```properties
-spring.h2.console.enabled=true
-spring.datasource.url=jdbc:h2:mem:testdb
-```
--->
-Go to the H2 console [http://localhost:8082/h2-console/](http://localhost:8082/h2-console/).
-<!-- To log on, change the value in the `JDBC URL` entry to 
-`jdbc:h2:mem:testdb`. 
-Compare the `BOOK` table and the `BOOK_EVENT` table (which is
-considered as an event store).-->
+### 🗺️ Route Planning & Dispatch Service
+- Optimizes delivery routes and courier assignments.  
+- Consumes **ShipmentCreated events** to assign couriers.  
+- Publishes **RouteOptimized & DispatchAssigned events**.  
+- Uses **Spring Boot service layer** for business logic.  
 
+---
 
+### 🤖 AI Copilot Service
+- Integrates **LangChain4j** with **Google Gemini API**.  
+- Provides **natural language queries** for customers and operators.  
+- Example:  
+  - Input → “Where is my parcel TRK2001?”  
+  - Process → AI queries Shipment Service via REST.  
+  - Output → “Your parcel is in Sydney Hub, expected delivery in 2 days.”  
 
-## Demonstration Use Cases
-_(1) Find all books_:
-```shell
-curl -X GET http://localhost:8082/books
-```
-which returns
-```json
-[{"title":"Introduction to Software Engineering","isbn":"0-684-84328-5"},{"title":"Domain Drive Design","isbn":"93-86954-21-4"}]
-```
+---
 
-_(2) Find libraries in which a book with a specific ISBN is available_:
-```shell
-curl -X GET http://localhost:8082/books/{0-684-84328-5}/available
-```
-which returns
-```json
-[{"libraryName":"Wollongong City Library","postcode":"2500"},{"libraryName":"UOW Library","postcode":"2522"}]
-```
+## 🏗️ Architecture
 
-_(3) Borrow the book `0-684-84328-5` from the Wollongong City Library (2500)_:
-```shell
-curl -X PUT http://localhost:8082/books/borrow/0-684-84328-5/2500
-```
-_(4) Check the change of availability for the book_:
-```shell
-curl -X GET http://localhost:8082/books/{0-684-84328-5}/available
-```
-_(5) Return it to the same library_:
-```shell
-curl -X PUT http://localhost:8082/books/return/0-684-84328-5/2500
-```
-_(6) Check the change of availability (again)_:
-```shell
-curl -X GET http://localhost:8082/books/{0-684-84328-5}/available
-```
+- **DDD & Bounded Contexts** → Each microservice owns its domain model and database.  
+- **Event-Driven with Kafka** → Services communicate asynchronously via domain events.  
+- **Stream Processing** → Spring Cloud Stream + Kafka Streams for real-time analytics (e.g., perishable alerts, shipment delays).  
+- **AI Integration** → AI Copilot augments system usability with natural language interfaces.  
 
-### _TODO_
-Examples of further improvement:
-- Improve use case (3). Consider what information should be returned 
-if borrowing a book is successful or unsuccessful.
-- Add an application service layer in __Library Service__.
-- Implement some DTO classes for one method in the Library Service.
-- Consider a use case “For all books by library”. Implement this use case by allowing the Library Service to 
-to communicate with the Book Service using the RestTemplate API.
+---
 
-<!---
-_TODO._
-When borrowing a book which is not available in the library
-(i.e., performing step (1) two consecutive times), an event is not
-created in the `BOOK_EVENT` event store.
-This is correct as the unsuccessful request does not change the system state.
-However, information should be returned to the customer to indicate the (un)successful
-book borrowing request.
-For this purpose,
-implement a DTO object as the return of the PUT request used in step (1).
+## 🚀 Run & Configuration
 
---->
+### Requirements
+- Java 21+  
+- Maven  
+- Kafka (running locally or in Docker)  
+- Postman for API testing  
+- Google Gemini API Key (for AI Copilot)  
+
+### Example Startup
+1. Start **Kafka** locally.  
+2. Run each service:  
+   ```bash
+   mvn spring-boot:run -pl warehouse-management-service
+   mvn spring-boot:run -pl shipment-tracking-service
+   mvn spring-boot:run -pl route-planning-service
+   mvn spring-boot:run -pl agentAI-service
+   ```
+3. Access APIs on ports (example):
+   - Warehouse → `http://localhost:8081`
+   - Shipment → `http://localhost:8082`
+   - Route Planning → `http://localhost:8083`
+   - AI Copilot → `http://localhost:8086`
+
+---
+
+## 🧪 Example Use Cases
+
+1. **Create a shipment**  
+   ```bash
+   curl -X POST http://localhost:8082/shipments \
+   -H "Content-Type: application/json" \
+   -d '{"trackingNumber":"TRK2001","status":"Pending","destination":"Melbourne","address":"120 Collins St, VIC","itemId":3}'
+   ```
+
+2. **Get all shipments**  
+   ```bash
+   curl http://localhost:8082/shipments
+   ```
+
+3. **Query AI Copilot** (via Postman)  
+   ```http
+   POST http://localhost:8086/chat/user123
+   {
+     "message": "Where is my parcel TRK2001?"
+   }
+   ```
+
+---
+
+## 📊 Event-Sourcing & Audit Logging
+- Kafka topics store immutable event logs:
+  - `ShipmentCreated`, `ShipmentDelivered`, `InventoryUpdated`, `RouteOptimized`.  
+- These logs support **traceability, replay, debugging, and analytics dashboards**.  
+
+---
+
+## 🔗 Repository
+👉 [GitHub Repo](https://github.com/your-org/logistics-microservices)  
