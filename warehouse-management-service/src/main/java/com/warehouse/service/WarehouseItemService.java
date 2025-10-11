@@ -3,6 +3,7 @@ package com.warehouse.service;
 import com.warehouse.model.WarehouseItem;
 import com.warehouse.model.event.WarehouseItemEvent;
 import com.warehouse.repository.WarehouseItemRepository;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -12,32 +13,31 @@ import java.util.Optional;
 public class WarehouseItemService {
 
     private final WarehouseItemRepository repository;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    public WarehouseItemService(WarehouseItemRepository repository) {
+    public WarehouseItemService(WarehouseItemRepository repository, KafkaTemplate<String, Object> kafkaTemplate) {
         this.repository = repository;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     // CREATE
     public WarehouseItem saveItem(WarehouseItem item) {
         WarehouseItem saved = repository.save(item);
 
-        // Create event
         WarehouseItemEvent event = new WarehouseItemEvent(
-                saved.getId(),
-                saved.getName(),
-                "CREATED"
+                saved.getId(), saved.getName(), "CREATED"
         );
-        System.out.println("EVENT: " + event);
+        kafkaTemplate.send("inventory-events", event);
 
+        System.out.println("📤 Sent Kafka Event: " + event);
         return saved;
     }
 
-    // READ - all items
+    // READ
     public List<WarehouseItem> getAllItems() {
         return repository.findAll();
     }
 
-    // READ - single item
     public Optional<WarehouseItem> getItemById(Long id) {
         return repository.findById(id);
     }
@@ -52,13 +52,9 @@ public class WarehouseItemService {
                     item.setLocation(updatedItem.getLocation());
                     WarehouseItem saved = repository.save(item);
 
-                    // Create event
-                    WarehouseItemEvent event = new WarehouseItemEvent(
-                            saved.getId(),
-                            saved.getName(),
-                            "UPDATED"
-                    );
-                    System.out.println("EVENT: " + event);
+                    WarehouseItemEvent event = new WarehouseItemEvent(saved.getId(), saved.getName(), "UPDATED");
+                    kafkaTemplate.send("inventory-events", event);
+                    System.out.println("📤 Sent Kafka Event: " + event);
 
                     return saved;
                 })
@@ -68,13 +64,8 @@ public class WarehouseItemService {
     // DELETE
     public void deleteItem(Long id) {
         repository.deleteById(id);
-
-        // Create event
-        WarehouseItemEvent event = new WarehouseItemEvent(
-                id,
-                "Unknown",   // name not available after deletion
-                "DELETED"
-        );
-        System.out.println("EVENT: " + event);
+        WarehouseItemEvent event = new WarehouseItemEvent(id, "Unknown", "DELETED");
+        kafkaTemplate.send("inventory-events", event);
+        System.out.println("📤 Sent Kafka Event: " + event);
     }
 }
